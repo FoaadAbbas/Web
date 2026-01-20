@@ -16,16 +16,15 @@ export function Card({
   return (
     <section
       className={[
-        "rounded-2xl border border-zinc-900 bg-zinc-950",
-        "shadow-sm shadow-black/30",
+        "rounded-2xl border card-surface",
         className,
       ].join(" ")}
     >
       {(title || subtitle || right) && (
-        <div className="px-4 py-3 border-b border-zinc-900 flex items-start justify-between gap-3">
+        <div className="px-4 py-3 border-b border-app flex items-start justify-between gap-3">
           <div>
             {title && <div className="font-semibold">{title}</div>}
-            {subtitle && <div className="text-sm text-zinc-400">{subtitle}</div>}
+            {subtitle && <div className="text-sm muted">{subtitle}</div>}
           </div>
           {right}
         </div>

@@ -170,6 +170,7 @@ async function main() {
         type: z.type,
         parentId: z.parentId,
         completionPct: z.completionPct ?? 0,
+        linkedScanIds: z.linkedScanIds || [],
       }))
     );
   });
@@ -188,6 +189,7 @@ async function main() {
       type,
       parentId,
       completionPct: 0,
+      linkedScanIds: [],
       createdAtISO: new Date().toISOString(),
     });
     res.json({
@@ -197,6 +199,7 @@ async function main() {
       type,
       parentId,
       completionPct: 0,
+      linkedScanIds: [],
     });
   });
 
@@ -205,6 +208,11 @@ async function main() {
     const patch: Record<string, unknown> = {};
     if (typeof req.body?.name === "string") patch.name = req.body.name;
     if (typeof req.body?.completionPct === "number") patch.completionPct = req.body.completionPct;
+    if (Array.isArray(req.body?.linkedScanIds)) {
+      patch.linkedScanIds = (req.body.linkedScanIds as unknown[])
+        .map((x) => String(x))
+        .filter((v) => !!v);
+    }
     const z = await ZoneModel.findByIdAndUpdate(id, patch, { new: true }).lean();
     if (!z) return res.status(404).json({ error: "not found" });
     res.json({
@@ -214,13 +222,18 @@ async function main() {
       type: z.type,
       parentId: z.parentId,
       completionPct: z.completionPct ?? 0,
+      linkedScanIds: z.linkedScanIds || [],
     });
   });
 
   app.delete("/api/zones/:id", async (req, res) => {
     const id = String(req.params.id);
-    // remove node + descendants
-    const zones = await ZoneModel.find().lean();
+    // remove node + descendants (scoped to the same project)
+    const root = await ZoneModel.findById(id).lean();
+    if (!root) return res.status(404).json({ error: "not found" });
+    const projectId = String(root.projectId);
+
+    const zones = await ZoneModel.find({ projectId }).lean();
     const childrenByParent = new Map<string, string[]>();
     for (const z of zones) {
       const pid = z.parentId ? String(z.parentId) : "";
@@ -235,7 +248,7 @@ async function main() {
       for (const c of childrenByParent.get(cur) || []) collect(c);
     };
     collect(id);
-    await ZoneModel.deleteMany({ _id: { $in: Array.from(toRemove) } });
+    await ZoneModel.deleteMany({ _id: { $in: Array.from(toRemove) }, projectId });
     res.json({ ok: true, removed: Array.from(toRemove) });
   });
 
@@ -476,8 +489,133 @@ async function main() {
   app.post("/api/chat", async (req, res) => {
     const prompt = String(req.body?.prompt || "");
     if (!prompt) return res.status(400).json({ error: "prompt is required" });
-    // TODO: call Gemini API here (kept as placeholder to avoid hardcoding keys)
-    res.json({ reply: `Gemini integration placeholder. You said: ${prompt}` });
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "Gemini API key not configured" });
+    }
+
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: `You are a construction progress assistant. ${prompt}` }],
+              },
+            ],
+          }),
+        }
+      );
+
+      const json = await r.json();
+      const candidate = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!candidate) throw new Error(json?.error?.message || "No response from Gemini");
+      res.json({ reply: candidate });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  app.get("/api/recommendations", async (req, res) => {
+    const projectId = String(req.query.projectId || demoProjectId);
+    const apiKey = process.env.GEMINI_API_KEY;
+    const latest = await RunModel.findOne({ projectId, status: "done" }).sort({ createdAtISO: -1 }).lean();
+    if (!latest) return res.json({ recommendations: ["Run a comparison to generate recommendations."] });
+    if (!apiKey) {
+      return res.json({
+        recommendations: [
+          "Enable Gemini by setting GEMINI_API_KEY to get AI recommendations.",
+          `Latest progress is ${latest.overallProgressPct.toFixed(1)}% with volume delta ${latest.volumeChangeM3?.toFixed(2) ?? 0} m³.`,
+        ],
+      });
+    }
+
+    const prompt = [
+      "You are a construction scheduler and progress analyst. Provide concise recommendations (max 3 bullets) for the project team.",
+      `Latest run overall progress: ${latest.overallProgressPct.toFixed(1)}%.`,
+      `Volume change: ${latest.volumeChangeM3?.toFixed(2) ?? 0} m3.`,
+      `Forecast completion: ${latest.forecastCompletionISO || "n/a"}.`,
+      `Alignment confidence: ${latest.alignmentConfidence}.`,
+      "Keep each bullet under 120 characters.",
+    ].join("\n");
+
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+          }),
+        }
+      );
+      const json = await r.json();
+      const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const lines = text
+        .split(/\n|•|-|\*/g)
+        .map((l: string) => l.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      if (!lines.length) lines.push("No recommendations available.");
+      res.json({ recommendations: lines });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  app.post("/api/schedule/sync", async (req, res) => {
+    const provider = String(req.body?.provider || "").toLowerCase();
+    const token = String(req.body?.token || "").trim();
+    const projectId = String(req.body?.projectId || demoProjectId);
+    if (!provider) return res.status(400).json({ error: "provider is required" });
+    if (!token) return res.status(400).json({ error: "token is required" });
+
+    const baseTasks = [
+      { id: "T-100", name: "Site mobilization", start: "2024-10-01", finish: "2024-10-10", progressPct: 100 },
+      { id: "T-200", name: "Excavation", start: "2024-10-11", finish: "2024-11-05", progressPct: 82 },
+      { id: "T-300", name: "Substructure", start: "2024-11-06", finish: "2024-12-15", progressPct: 45 },
+      { id: "T-400", name: "Superstructure", start: "2024-12-16", finish: "2025-02-20", progressPct: 10 },
+    ];
+
+    // Simulate provider specific meta
+    res.json({
+      provider,
+      projectId,
+      status: "synced",
+      fetchedAtISO: new Date().toISOString(),
+      tasks: baseTasks.map((t, i) => ({
+        ...t,
+        providerId: `${provider.toUpperCase()}-${t.id}`,
+        owner: i % 2 === 0 ? "GC" : "Subcontractor",
+        critical: i < 2,
+      })),
+    });
+  });
+
+  app.get("/api/work-diary", async (req, res) => {
+    const projectId = String(req.query.projectId || demoProjectId);
+    const entries = [
+      {
+        id: "WD-1",
+        projectId,
+        dateISO: new Date().toISOString(),
+        crew: "Concrete",
+        summary: "Poured podium slab, inspected formwork, minor rebar issue resolved.",
+      },
+      {
+        id: "WD-2",
+        projectId,
+        dateISO: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+        crew: "Earthworks",
+        summary: "Completed north excavation, trucked spoil offsite, survey confirmation signed.",
+      },
+    ];
+    res.json({ entries });
   });
 
   const server = app.listen(PORT, () => {

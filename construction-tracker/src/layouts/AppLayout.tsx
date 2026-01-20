@@ -2,10 +2,12 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "../components/navigation/Sidebar";
 import { Topbar } from "../components/navigation/Topbar";
 import { ChatWidget } from "../features/chat/components/ChatWidget";
+import { useTheme } from "../app/useTheme";
 
 export function AppLayout() {
+  const { mode } = useTheme();
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className={`min-h-screen ${mode === "light" ? "theme-light" : "theme-dark"} bg-app text-app`}>
       <Topbar />
 
       {/* Drawer sidebar overlays the page */}

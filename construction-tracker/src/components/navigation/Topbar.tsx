@@ -1,40 +1,68 @@
 // src/components/navigation/Topbar.tsx
 import { useUi } from "../../app/useUi";
 import { useAuth } from "../../app/auth/AuthProvider";
+import { useAppData } from "../../app/data/useAppData";
+import { useTheme } from "../../app/useTheme";
 
 export function Topbar() {
   const { toggleNav } = useUi();
   const { user, logout } = useAuth();
+  const { projects, data, setProjectId } = useAppData();
+  const { mode, toggle } = useTheme();
 
   return (
-    <header className="sticky top-0 z-10 border-b border-zinc-900 bg-zinc-950/80 backdrop-blur">
-      <div className="px-4 md:px-6 h-14 flex items-center justify-between max-w-7xl mx-auto">
+    <header className="sticky top-0 z-10 border-b border-app bg-app backdrop-blur">
+      <div className="px-4 md:px-6 h-16 flex items-center justify-between max-w-7xl mx-auto">
         {/* Left: Menu + title */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggleNav}
-            className="rounded-lg border border-zinc-800 px-3 py-2 text-sm hover:bg-zinc-900"
+            className="rounded-lg border border-app px-3 py-2 text-sm bg-app"
             aria-label="Open menu"
           >
             ☰
           </button>
 
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm muted">
             Construction tracking
           </div>
         </div>
 
-        {/* Right: User + logout */}
+        {/* Right: Project selector + theme + user */}
         <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2">
+            <label className="text-xs muted">Project</label>
+            <select
+              value={data.projectId || ""}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={toggle}
+            className="rounded-lg border border-app px-3 py-2 text-sm bg-app"
+            aria-label="Toggle theme"
+            title="Toggle light/dark"
+          >
+            {mode === "light" ? "🌞 Light" : "🌙 Dark"}
+          </button>
+
           {user?.email && (
-            <div className="text-xs text-zinc-400 hidden sm:block">
+            <div className="text-xs muted hidden md:block">
               {user.email}
             </div>
           )}
 
           <button
             onClick={logout}
-            className="rounded-lg border border-zinc-800 px-3 py-2 text-sm hover:bg-zinc-900"
+            className="rounded-lg border border-app px-3 py-2 text-sm bg-app"
           >
             Logout
           </button>

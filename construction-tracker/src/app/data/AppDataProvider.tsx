@@ -2,18 +2,23 @@ import { createContext, useEffect, useMemo, useRef, useState } from "react";
 import type { AppData, AreaId, AreaNode, ComparisonRun, Scan, ScanId } from "./types";
 import {
   chat,
+  createProject as apiCreateProject,
   createReport,
   createRun,
   createZone,
   deleteScan,
   deleteZone,
   fetchDashboard,
+  fetchRecommendations,
   fetchProjects,
   fetchReports,
   fetchRuns,
   fetchScans,
   fetchZones,
+  fetchWorkDiary,
+  patchZoneLinks,
   patchZone,
+  syncSchedule,
   uploadScan,
 } from "./api";
 
@@ -21,6 +26,7 @@ type AppDataContextValue = {
   data: AppData;
   isLoading: boolean;
   error?: string;
+  projects: { id: string; name: string; createdAtISO: string }[];
 
   // Scans
   addScan: (file: File, capturedAtISO: string, notes?: string) => Promise<void>;
@@ -28,11 +34,12 @@ type AppDataContextValue = {
   setSelectedT1: (scanId?: ScanId) => void;
   setSelectedT2: (scanId?: ScanId) => void;
 
-  // Zones
-  addArea: (name: string, type: AreaNode["type"], parentId?: AreaId) => Promise<void>;
+      // Zones
+      addArea: (name: string, type: AreaNode["type"], parentId?: AreaId) => Promise<string>;
   renameArea: (id: AreaId, name: string) => Promise<void>;
   removeArea: (id: AreaId) => Promise<void>;
   setAreaCompletion: (id: AreaId, completionPct: number) => Promise<void>;
+  linkScanToArea: (id: AreaId, scanIds: string[]) => Promise<void>;
 
   // Comparison
   runComparison: () => Promise<void>;
@@ -46,6 +53,11 @@ type AppDataContextValue = {
 
   // Dashboard
   refreshDashboard: () => Promise<void>;
+  fetchRecommendations: () => Promise<string[]>;
+  syncSchedule: (provider: "msproject" | "primavera", token: string) => Promise<any>;
+  fetchWorkDiary: () => Promise<any>;
+  setProjectId: (projectId: string) => void;
+  createProject: (name: string) => Promise<string>;
   dashboard: {
     overallProgressPct: number;
     volumeChangeM3: number;
@@ -62,6 +74,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData>({ scans: [], areas: [], runs: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [projects, setProjects] = useState<{ id: string; name: string; createdAtISO: string }[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | undefined>(undefined);
 
   const [dashboard, setDashboard] = useState<AppDataContextValue["dashboard"]>({
     overallProgressPct: 0,
@@ -72,7 +86,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   });
   const [reports, setReports] = useState<AppDataContextValue["reports"]>([]);
 
-  const projectIdRef = useRef<string | undefined>(undefined);
+  const wsRef = useRef<WebSocket | null>(null);
+  const LS_PROJECT = "constrack_project";
 
   async function loadAll(projectId: string) {
     const [zones, scans, runs, dash, reps] = await Promise.all([
@@ -92,6 +107,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         type: z.type as AreaNode["type"],
         parentId: z.parentId,
         completionPct: z.completionPct,
+        linkedScanIds: z.linkedScanIds || [],
       })),
       scans: scans.map((s) => ({
         id: s.id,
@@ -138,49 +154,70 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    let ws: WebSocket | null = null;
+    (async () => {
+      try {
+        setError(undefined);
+        const projectList = await fetchProjects();
+        setProjects(projectList);
+        const stored = localStorage.getItem(LS_PROJECT);
+        const fallback = stored && projectList.find((p) => p.id === stored) ? stored : projectList[0]?.id;
+        setActiveProjectId(fallback);
+      } catch (e: any) {
+        setError(String(e?.message || e));
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!activeProjectId) return;
+    localStorage.setItem(LS_PROJECT, activeProjectId);
+
+    let cancelled = false;
+    const setupWs = () => {
+      try {
+        wsRef.current?.close();
+      } catch {
+        // ignore
+      }
+      const ws = new WebSocket(`ws://localhost:4000/ws?projectId=${encodeURIComponent(activeProjectId)}`);
+      ws.onmessage = async (ev) => {
+        try {
+          const msg = JSON.parse(String(ev.data));
+          if (msg?.type === "run.done" || msg?.type === "run.created") {
+            await loadAll(activeProjectId);
+          }
+        } catch {
+          // ignore
+        }
+      };
+      wsRef.current = ws;
+    };
+
     (async () => {
       try {
         setIsLoading(true);
-        setError(undefined);
-        const projects = await fetchProjects();
-        const projectId = projects[0]?.id;
-        if (!projectId) throw new Error("No project found");
-        projectIdRef.current = projectId;
-        await loadAll(projectId);
-
-        // WebSocket for realtime run updates
-        ws = new WebSocket(`ws://localhost:4000/ws?projectId=${encodeURIComponent(projectId)}`);
-        ws.onmessage = async (ev) => {
-          try {
-            const msg = JSON.parse(String(ev.data));
-            if (msg?.type === "run.done" || msg?.type === "run.created") {
-              await loadAll(projectId);
-            }
-          } catch {
-            // ignore
-          }
-        };
-
+        await loadAll(activeProjectId);
+        setupWs();
       } catch (e: any) {
-        setError(String(e?.message || e));
+        if (!cancelled) setError(String(e?.message || e));
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     })();
 
     return () => {
+      cancelled = true;
       try {
-        ws?.close();
+        wsRef.current?.close();
       } catch {
         // ignore
       }
     };
-  }, []);
+  }, [activeProjectId]);
 
   const api = useMemo<AppDataContextValue>(() => {
     const getProjectId = () => {
-      const pid = projectIdRef.current || data.projectId;
+      const pid = activeProjectId || data.projectId;
       if (!pid) throw new Error("projectId not loaded");
       return pid;
     };
@@ -189,8 +226,19 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       data,
       isLoading,
       error,
+      projects,
       dashboard,
       reports,
+      setProjectId: (projectId) => setActiveProjectId(projectId),
+      createProject: async (name) => {
+        const trimmed = String(name || "").trim();
+        if (trimmed.length < 2) throw new Error("Project name is required");
+        const created = await apiCreateProject(trimmed);
+        const projectList = await fetchProjects();
+        setProjects(projectList);
+        setActiveProjectId(created.id);
+        return created.id;
+      },
 
       addScan: async (file, capturedAtISO, notes) => {
         const projectId = getProjectId();
@@ -214,8 +262,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
       addArea: async (name, type, parentId) => {
         const projectId = getProjectId();
-        await createZone(projectId, { name, type, parentId });
+        const result = await createZone(projectId, { name, type, parentId });
         await loadAll(projectId);
+        return result.id;
       },
 
       renameArea: async (id, name) => {
@@ -233,6 +282,12 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setAreaCompletion: async (id, completionPct) => {
         const projectId = getProjectId();
         await patchZone(id, { completionPct });
+        await loadAll(projectId);
+      },
+
+      linkScanToArea: async (id, scanIds) => {
+        const projectId = getProjectId();
+        await patchZoneLinks(id, scanIds);
         await loadAll(projectId);
       },
 
@@ -275,8 +330,24 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         const projectId = getProjectId();
         setDashboard(await fetchDashboard(projectId));
       },
+
+      fetchRecommendations: async () => {
+        const projectId = getProjectId();
+        const r = await fetchRecommendations(projectId);
+        return r.recommendations;
+      },
+
+      syncSchedule: async (provider, token) => {
+        const projectId = getProjectId();
+        return syncSchedule(projectId, provider, token);
+      },
+
+      fetchWorkDiary: async () => {
+        const projectId = getProjectId();
+        return fetchWorkDiary(projectId);
+      },
     };
-  }, [data, isLoading, error, dashboard, reports]);
+  }, [data, isLoading, error, dashboard, reports, activeProjectId, projects]);
 
   return <AppDataContext.Provider value={api}>{children}</AppDataContext.Provider>;
 }

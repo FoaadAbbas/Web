@@ -24,6 +24,7 @@ export type ZoneDoc = {
   parentId?: string;
   completionPct: number;
   createdAtISO: string;
+  linkedScanIds: string[];
 };
 
 const ZoneSchema = new Schema<ZoneDoc>(
@@ -33,6 +34,7 @@ const ZoneSchema = new Schema<ZoneDoc>(
     type: { type: String, required: true },
     parentId: { type: String, required: false, index: true },
     completionPct: { type: Number, required: true, default: 0 },
+    linkedScanIds: { type: [String], required: true, default: [] },
     createdAtISO: { type: String, required: true },
   },
   { versionKey: false }

@@ -11,6 +11,7 @@ import { AreasPage } from "../pages/areas/AreasPage";
 import { ComparePage } from "../pages/compare/ComparePage";
 import { ReportsPage } from "../pages/reports/ReportsPage";
 import { ChatHistoryPage } from "../pages/chat/ChatHistoryPage";
+import { SchedulePage } from "../pages/schedule/SchedulePage";
 
 export const router = createBrowserRouter([
   {
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
           { path: "/", element: <DashboardPage /> },
           { path: "/scans", element: <UploadComparePage /> },
           { path: "/areas", element: <AreasPage /> },
+          { path: "/schedule", element: <SchedulePage /> },
           { path: "/compare", element: <ComparePage /> },
           { path: "/reports", element: <ReportsPage /> },
           { path: "/chat", element: <ChatHistoryPage /> },

@@ -57,16 +57,16 @@ export function LoginPage() {
         Log in
       </Button>
 
-      <div className="text-xs text-zinc-400 flex justify-between">
+      <div className="text-xs muted flex justify-between">
         <button
           type="button"
-          className="hover:text-zinc-200"
+          className="underline"
           onClick={() => alert("Later: forgot password flow")}
         >
           Forgot password?
         </button>
 
-        <Link to="/register" className="hover:text-zinc-200">
+        <Link to="/register" className="underline">
           Create account
         </Link>
       </div>

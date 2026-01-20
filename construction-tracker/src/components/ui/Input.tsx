@@ -7,14 +7,15 @@ export function Input({ label, error, className = "", ...props }: InputProps) {
   return (
     <label className="block">
       {label && (
-        <div className="mb-1 text-sm text-zinc-300">
+        <div className="mb-1 text-sm muted">
           {label}
         </div>
       )}
       <input
         className={[
-          "w-full rounded-xl bg-zinc-900 border px-3 py-2 text-sm outline-none",
-          error ? "border-red-500" : "border-zinc-800 focus:border-zinc-600",
+          "w-full rounded-xl border px-3 py-2 text-sm outline-none",
+          "bg-app text-app",
+          error ? "border-red-500" : "border-app focus:border-app",
           className,
         ].join(" ")}
         {...props}

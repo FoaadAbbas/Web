@@ -24,12 +24,12 @@ function buildTree(nodes: AreaNode[]) {
 }
 
 export function AreasPage() {
-  const { data, addArea, renameArea, removeArea, setAreaCompletion } = useAppData();
+  const { data, addArea, renameArea, removeArea, setAreaCompletion, linkScanToArea, createProject } = useAppData();
   const tree = useMemo(() => buildTree(data.areas), [data.areas]);
 
   const siteRoot = data.areas.find((a) => a.type === "site");
   const [createParentId, setCreateParentId] = useState<string>(siteRoot?.id ?? "");
-  const [createType, setCreateType] = useState<AreaNode["type"]>("floor");
+  const [createType, setCreateType] = useState<string>("floor");
   const [createName, setCreateName] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,28 +39,31 @@ export function AreasPage() {
 
   const canCreate = createName.trim().length >= 2 && !!createParentId;
 
+  const [linkChoice, setLinkChoice] = useState<Record<string, string>>({});
+
   const renderNode = (node: AreaNode, depth: number) => {
     const kids = tree.children.get(node.id) ?? [];
     const isEditing = editingId === node.id;
+    const linkedScans = node.linkedScanIds || [];
 
     return (
       <div key={node.id}>
         <div
           className={[
-            "flex items-center justify-between gap-3 rounded-xl border border-zinc-900 bg-zinc-950 px-3 py-2",
+            "flex items-center justify-between gap-3 rounded-xl border border-app bg-app px-3 py-2",
             depth === 0 ? "" : "mt-2",
           ].join(" ")}
           style={{ marginLeft: depth * 14 }}
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs px-2 py-0.5 rounded-full border border-zinc-800 text-zinc-300">
+              <span className="text-xs px-2 py-0.5 rounded-full border border-app">
                 {node.type}
               </span>
               {isEditing ? (
                 <input
                   autoFocus
-                  className="bg-transparent border-b border-zinc-700 outline-none text-sm w-64"
+                  className="bg-transparent border-b border-app outline-none text-sm w-64"
                   value={editingName}
                   onChange={(e) => setEditingName(e.target.value)}
                   onKeyDown={(e) => {
@@ -75,12 +78,12 @@ export function AreasPage() {
                 <span className="font-medium truncate">{node.name}</span>
               )}
               {node.type === "zone" && (
-                <span className="text-xs px-2 py-0.5 rounded-full border border-zinc-800 text-zinc-200">
+                <span className="text-xs px-2 py-0.5 rounded-full border border-app">
                   {Math.round((node.completionPct ?? 0) * 10) / 10}%
                 </span>
               )}
             </div>
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs muted">
               {kids.length ? `${kids.length} child nodes` : "Leaf"}
             </div>
           </div>
@@ -131,7 +134,15 @@ export function AreasPage() {
                   </Button>
                 )}
                 {node.type !== "site" && (
-                  <Button className="w-auto" variant="secondary" onClick={() => removeArea(node.id)}>
+                  <Button
+                    className="w-auto"
+                    variant="secondary"
+                    onClick={() => {
+                      const ok = window.confirm(`Delete "${node.name}" and all its child nodes?`);
+                      if (!ok) return;
+                      removeArea(node.id);
+                    }}
+                  >
                     Delete
                   </Button>
                 )}
@@ -140,6 +151,62 @@ export function AreasPage() {
           </div>
         </div>
 
+        {node.type === "zone" && (
+          <div className="mt-2 space-y-2" style={{ marginLeft: depth * 14 + 8 }}>
+            <div className="text-xs muted">Linked scans</div>
+            <div className="flex flex-wrap gap-2">
+              {linkedScans.length === 0 && <span className="text-xs muted">No scans linked.</span>}
+              {linkedScans.map((sid) => {
+                const scan = data.scans.find((s) => s.id === sid);
+                return (
+                  <span key={sid} className="text-xs rounded-full border border-app px-2 py-1 flex items-center gap-2">
+                    {scan?.name || sid}
+                    <button
+                      className="text-[10px] muted"
+                      onClick={() =>
+                        linkScanToArea(
+                          node.id,
+                          linkedScans.filter((x) => x !== sid)
+                        )
+                      }
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+            {data.scans.length > 0 && (
+              <div className="flex items-center gap-2">
+                <select
+                  className="rounded-lg border border-app bg-app px-3 py-2 text-sm"
+                  value={linkChoice[node.id] || ""}
+                  onChange={(e) => setLinkChoice((prev) => ({ ...prev, [node.id]: e.target.value }))}
+                >
+                  <option value="">Choose scan</option>
+                  {data.scans.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  className="w-auto"
+                  disabled={!linkChoice[node.id]}
+                  onClick={() => {
+                    const chosen = linkChoice[node.id];
+                    if (!chosen) return;
+                    const next = Array.from(new Set([...linkedScans, chosen]));
+                    linkScanToArea(node.id, next);
+                  }}
+                >
+                  Link scan
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {kids.map((k) => renderNode(k, depth + 1))}
       </div>
     );
@@ -147,11 +214,25 @@ export function AreasPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="text-2xl font-semibold">Zones & Site Map</div>
-        <div className="text-sm text-zinc-400">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-2xl font-semibold">Zones & Site Map</div>
+          <div className="text-sm muted">
           Define your site hierarchy (floors, wings, zones). This enables progress KPIs even without a BIM model.
+          </div>
         </div>
+
+        <Button
+          className="w-auto"
+          variant="secondary"
+          onClick={async () => {
+            const name = window.prompt("New project name");
+            if (!name) return;
+            await createProject(name);
+          }}
+        >
+          Create new project
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -165,25 +246,26 @@ export function AreasPage() {
               ))}
             </Select>
 
-            <Select label="Type" value={createType} onChange={(e) => setCreateType(e.target.value as AreaNode["type"])}>
-              <option value="floor">floor</option>
-              <option value="wing">wing</option>
-              <option value="zone">zone</option>
-            </Select>
+            <Input
+              label="Type"
+              value={createType}
+              onChange={(e) => setCreateType(e.target.value)}
+              placeholder="e.g., floor, wing, zone, room, section"
+            />
 
             <Input label="Name" value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="e.g., Floor 2" />
 
             <Button
               disabled={!canCreate}
-              onClick={() => {
-                addArea(createName.trim(), createType, createParentId || undefined);
+              onClick={async () => {
+                await addArea(createName.trim(), createType as any, createParentId || undefined);
                 setCreateName("");
               }}
             >
               Add
             </Button>
 
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs muted">
               Recommended: Site → Floor → Wing → Zone. Only leaf nodes (type: zone) get progress metrics.
             </div>
           </div>
@@ -193,7 +275,7 @@ export function AreasPage() {
           {siteRoot ? (
             <div>{renderNode(siteRoot, 0)}</div>
           ) : (
-            <div className="text-sm text-zinc-400">No site root found.</div>
+            <div className="text-sm muted">No site root found.</div>
           )}
         </Card>
       </div>

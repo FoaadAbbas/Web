@@ -5,10 +5,11 @@ type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
 export function Select({ label, className = "", children, ...props }: SelectProps) {
   return (
     <label className="block">
-      {label && <div className="mb-1 text-sm text-zinc-300">{label}</div>}
+      {label && <div className="mb-1 text-sm muted">{label}</div>}
       <select
         className={[
-          "w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm outline-none focus:border-zinc-600",
+          "w-full rounded-xl border px-3 py-2 text-sm outline-none",
+          "bg-app text-app border-app focus:border-app",
           className,
         ].join(" ")}
         {...props}

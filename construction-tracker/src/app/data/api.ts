@@ -22,14 +22,30 @@ export async function fetchProjects() {
   return api<{ id: string; name: string; createdAtISO: string }[]>("/api/projects");
 }
 
+export async function createProject(name: string) {
+  return api<{ id: string; name: string; createdAtISO: string }>("/api/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
 export async function fetchZones(projectId: string) {
   return api<
-    { id: string; projectId: string; name: string; type: string; parentId?: string; completionPct: number }[]
+    {
+      id: string;
+      projectId: string;
+      name: string;
+      type: string;
+      parentId?: string;
+      completionPct: number;
+      linkedScanIds?: string[];
+    }[]
   >(`/api/zones?projectId=${encodeURIComponent(projectId)}`);
 }
 
 export async function createZone(projectId: string, body: { name: string; type: string; parentId?: string }) {
-  return api(`/api/zones`, {
+  return api<{ id: string; projectId: string; name: string; type: string; parentId?: string; completionPct: number }>(`/api/zones`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ projectId, ...body }),
@@ -41,6 +57,14 @@ export async function patchZone(id: string, body: { name?: string; completionPct
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+export async function patchZoneLinks(id: string, linkedScanIds: string[]) {
+  return api(`/api/zones/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ linkedScanIds }),
   });
 }
 
@@ -107,4 +131,40 @@ export async function chat(prompt: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt }),
   });
+}
+
+export async function fetchRecommendations(projectId: string) {
+  return api<{ recommendations: string[] }>(`/api/recommendations?projectId=${encodeURIComponent(projectId)}`);
+}
+
+export async function syncSchedule(
+  projectId: string,
+  provider: "msproject" | "primavera",
+  token: string
+) {
+  return api<{
+    provider: string;
+    status: string;
+    fetchedAtISO: string;
+    tasks: {
+      id: string;
+      providerId: string;
+      name: string;
+      start: string;
+      finish: string;
+      progressPct: number;
+      owner: string;
+      critical: boolean;
+    }[];
+  }>(`/api/schedule/sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId, provider, token }),
+  });
+}
+
+export async function fetchWorkDiary(projectId: string) {
+  return api<{ entries: { id: string; projectId: string; dateISO: string; crew: string; summary: string }[] }>(
+    `/api/work-diary?projectId=${encodeURIComponent(projectId)}`
+  );
 }

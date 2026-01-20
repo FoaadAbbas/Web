@@ -11,18 +11,16 @@ export function ReportsPage() {
     <div className="space-y-6">
       <div>
         <div className="text-2xl font-semibold">Reports</div>
-        <div className="text-sm text-zinc-400">
-          Generate real PDF and Excel reports from comparison runs.
-        </div>
+        <div className="text-sm muted">Generate real PDF and Excel reports from comparison runs.</div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card title="Quick generate" subtitle={latest ? `Latest run: ${formatDate(latest.createdAtISO)}` : "No runs yet"}>
           {!latest ? (
-            <div className="text-sm text-zinc-400">Run a comparison first to generate a report.</div>
+            <div className="text-sm muted">Run a comparison first to generate a report.</div>
           ) : (
             <div className="space-y-3">
-              <div className="text-sm text-zinc-400">
+              <div className="text-sm muted">
                 This will generate and store a PDF + XLSX on the backend, and you can download them from report history.
               </div>
               <Button onClick={() => void generateReportForRun(latest.id)}>Generate PDF + Excel</Button>
@@ -32,12 +30,12 @@ export function ReportsPage() {
 
         <Card title="Report history" subtitle={`${reports.length} reports`} className="lg:col-span-2">
           {reports.length === 0 ? (
-            <div className="text-sm text-zinc-400">No reports yet.</div>
+            <div className="text-sm muted">No reports yet.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="text-zinc-400">
-                  <tr className="border-b border-zinc-900">
+                <thead className="muted">
+                  <tr className="border-b border-app">
                     <th className="text-left py-2 pr-3">Created</th>
                     <th className="text-left py-2 pr-3">Run</th>
                     <th className="text-right py-2">Downloads</th>
@@ -45,13 +43,13 @@ export function ReportsPage() {
                 </thead>
                 <tbody>
                   {reports.map((r) => (
-                    <tr key={r.id} className="border-b border-zinc-900/70">
-                      <td className="py-2 pr-3 text-zinc-300">{formatDate(r.createdAtISO)}</td>
-                      <td className="py-2 pr-3 text-zinc-300">{r.runId}</td>
+                    <tr key={r.id} className="border-b border-app/60">
+                      <td className="py-2 pr-3 text-app">{formatDate(r.createdAtISO)}</td>
+                      <td className="py-2 pr-3 text-app">{r.runId}</td>
                       <td className="py-2 text-right">
                         <div className="flex gap-2 justify-end">
                           <a
-                            className="rounded-xl border border-zinc-800 px-3 py-2 text-sm hover:bg-zinc-900"
+                            className="rounded-xl border border-app px-3 py-2 text-sm"
                             href={r.pdfUrl}
                             target="_blank"
                             rel="noreferrer"
@@ -59,7 +57,7 @@ export function ReportsPage() {
                             PDF
                           </a>
                           <a
-                            className="rounded-xl border border-zinc-800 px-3 py-2 text-sm hover:bg-zinc-900"
+                            className="rounded-xl border border-app px-3 py-2 text-sm"
                             href={r.xlsxUrl}
                             target="_blank"
                             rel="noreferrer"

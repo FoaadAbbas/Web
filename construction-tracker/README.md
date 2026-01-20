@@ -18,10 +18,18 @@ This repo now contains:
 
 ```bash
 cd backend
-cp .env.example .env
 npm i
 npm run dev
 ```
+
+#### Backend env (Atlas / Gemini / deployment)
+
+- Create a `backend/.env` locally (do not commit it) and set:
+  - `MONGODB_URI` (MongoDB Atlas recommended)
+  - `GEMINI_API_KEY` (optional; enables chatbot + recommendations)
+  - `PYTHON_BIN` (optional; Windows often `python`)
+
+See `backend/ENV.md` for details.
 
 ### 3) Python dependencies (volume diff)
 

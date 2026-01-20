@@ -12,8 +12,8 @@ export function Button({
 
   const styles =
     variant === "primary"
-      ? "bg-zinc-100 text-zinc-900 hover:bg-white"
-      : "border border-zinc-800 text-zinc-100 hover:bg-zinc-900";
+      ? "accent"
+      : "btn-secondary border border-app";
 
   return <button className={[base, styles, className].join(" ")} {...props} />;
 }

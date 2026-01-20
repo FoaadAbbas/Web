@@ -61,12 +61,12 @@ export function ChatHistoryPage() {
     <div className="space-y-6">
       <div>
         <div className="text-2xl font-semibold">Chatbot</div>
-        <div className="text-sm text-zinc-400">Backend endpoint is ready. Next step is plugging Gemini API.</div>
+        <div className="text-sm muted">Backend endpoint is ready. Next step is plugging Gemini API.</div>
       </div>
 
       <Card title="Conversation" subtitle={`${msgs.length} messages`}>
         <div className="space-y-3">
-          <div className="h-[52vh] overflow-y-auto rounded-xl border border-zinc-900 bg-zinc-950 p-3">
+          <div className="h-[52vh] overflow-y-auto rounded-xl border border-app surface-2 p-3">
             <div className="space-y-3">
               {msgs.map((m) => (
                 <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
@@ -74,12 +74,12 @@ export function ChatHistoryPage() {
                     className={[
                       "max-w-[85%] rounded-2xl px-3 py-2 text-sm border",
                       m.role === "user"
-                        ? "bg-zinc-100 text-zinc-900 border-zinc-200"
-                        : "bg-zinc-950 text-zinc-100 border-zinc-800",
+                        ? "bg-app text-app border-app"
+                        : "surface-2 text-app border-app",
                     ].join(" ")}
                   >
                     <div className="whitespace-pre-wrap">{m.text}</div>
-                    <div className={m.role === "user" ? "mt-1 text-[10px] text-zinc-600" : "mt-1 text-[10px] text-zinc-500"}>
+                    <div className="mt-1 text-[10px] muted">
                       {new Date(m.createdAtISO).toLocaleTimeString()}
                     </div>
                   </div>

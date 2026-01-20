@@ -4,10 +4,9 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useUi } from "../../app/useUi";
 import { useLockBodyScroll } from "../../app/useLockBodyScroll.ts";
 
-const base =
-  "block px-3 py-2 rounded-lg text-sm transition border border-transparent";
-const active = "bg-zinc-900 border-zinc-800";
-const idle = "text-zinc-300 hover:bg-zinc-900/60";
+const base = "block px-3 py-2 rounded-lg text-sm transition border";
+const active = "bg-app border-app text-app";
+const idle = "muted hover:bg-app";
 
 export function Sidebar() {
   const { isNavOpen, closeNav } = useUi();
@@ -49,7 +48,7 @@ export function Sidebar() {
       <aside
         className={[
           "fixed z-50 top-0 left-0 h-full w-72",
-          "border-r border-zinc-900 bg-zinc-950",
+          "border-r border-app bg-app text-app",
           "transform transition-transform duration-200",
           isNavOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
@@ -57,14 +56,14 @@ export function Sidebar() {
         aria-modal="true"
         aria-label="Navigation menu"
       >
-        <div className="p-4 border-b border-zinc-900 flex items-center justify-between">
+        <div className="p-4 border-b border-app flex items-center justify-between">
           <div>
-            <div className="text-sm text-zinc-400">Project</div>
+            <div className="text-sm muted">Project</div>
             <div className="font-semibold">ConsTrack</div>
           </div>
           <button
             onClick={closeNav}
-            className="text-zinc-400 hover:text-zinc-200 text-sm"
+            className="muted text-sm"
             aria-label="Close menu"
           >
             Close
@@ -85,6 +84,13 @@ export function Sidebar() {
             className={({ isActive }) => `${base} ${isActive ? active : idle}`}
           >
             Scans
+          </NavLink>
+
+          <NavLink
+            to="/schedule"
+            className={({ isActive }) => `${base} ${isActive ? active : idle}`}
+          >
+            Schedule
           </NavLink>
 
           <NavLink to="/areas" className={({ isActive }) => `${base} ${isActive ? active : idle}`}>Zones</NavLink>

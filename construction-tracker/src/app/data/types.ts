@@ -17,6 +17,7 @@ export type AreaNode = {
   type: "site" | "floor" | "wing" | "zone";
   parentId?: AreaId;
   completionPct?: number; // 0..100 (mainly for zones)
+  linkedScanIds?: ScanId[];
 };
 
 export type AreaMetric = {
@@ -51,4 +52,23 @@ export type AppData = {
   selectedT2?: ScanId;
   areas: AreaNode[];
   runs: ComparisonRun[];
+};
+
+export type ScheduleTask = {
+  id: string;
+  providerId: string;
+  name: string;
+  start: string;
+  finish: string;
+  progressPct: number;
+  owner: string;
+  critical: boolean;
+};
+
+export type WorkDiaryEntry = {
+  id: string;
+  projectId: string;
+  dateISO: string;
+  crew: string;
+  summary: string;
 };

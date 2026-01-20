@@ -63,9 +63,9 @@ export function RegisterPage() {
         Create account
       </Button>
 
-      <div className="text-xs text-zinc-400">
+      <div className="text-xs muted">
         Already have an account?{" "}
-        <Link to="/login" className="hover:text-zinc-200">
+        <Link to="/login" className="underline">
           Log in
         </Link>
       </div>

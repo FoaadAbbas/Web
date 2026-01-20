@@ -30,7 +30,7 @@ export function ComparePage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-2xl font-semibold">Compare</div>
-          <div className="text-sm text-zinc-400">Run a comparison between t₁ and t₂ and generate KPIs + forecasts.</div>
+          <div className="text-sm muted">Run a comparison between t₁ and t₂ and generate KPIs + forecasts.</div>
         </div>
         <Button className="w-auto" variant="secondary" onClick={() => nav("/reports")}>Reports</Button>
       </div>
@@ -39,15 +39,15 @@ export function ComparePage() {
         <Card title="Inputs" subtitle="Select scans + areas">
           <div className="space-y-3 text-sm">
             <div>
-              <div className="text-zinc-400">t₁</div>
+              <div className="muted">t₁</div>
               <div className="font-medium">{t1 ? t1.name : "Not selected"}</div>
             </div>
             <div>
-              <div className="text-zinc-400">t₂</div>
+              <div className="muted">t₂</div>
               <div className="font-medium">{t2 ? t2.name : "Not selected"}</div>
             </div>
             <div>
-              <div className="text-zinc-400">Defined leaf areas</div>
+              <div className="muted">Defined leaf areas</div>
               <div className="font-medium">{leafAreaCount}</div>
             </div>
 
@@ -59,7 +59,7 @@ export function ComparePage() {
         </Card>
 
         <Card title="Run" subtitle="Compute volume delta + progress">
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm muted">
             Runs an async backend job (Python) to compute volume(T1), volume(T2), ΔV, and progress metrics.
           </div>
 
@@ -82,11 +82,11 @@ export function ComparePage() {
 
         <Card title="Latest output" subtitle={latest ? formatDate(latest.createdAtISO) : "No runs yet"}>
           {!latest ? (
-            <div className="text-sm text-zinc-400">Run a comparison to generate outputs.</div>
+            <div className="text-sm muted">Run a comparison to generate outputs.</div>
           ) : (
             <div className="space-y-3 text-sm">
               {latest.status && latest.status !== "done" && (
-                <div className="rounded-xl border border-zinc-900 bg-zinc-950 p-3 text-zinc-300">
+                <div className="rounded-xl border border-app surface-2 p-3 text-app">
                   Status: <span className="font-semibold">{latest.status}</span>
                   {latest.status === "failed" && latest.error ? (
                     <div className="mt-2 text-xs text-red-400">{latest.error}</div>
@@ -94,19 +94,19 @@ export function ComparePage() {
                 </div>
               )}
               <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Overall progress</span>
+                <span className="muted">Overall progress</span>
                 <span className="font-semibold">{latest.overallProgressPct}%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Volume change</span>
+                <span className="muted">Volume change</span>
                 <span className="font-semibold">{(latest.volumeChangeM3 ?? 0).toFixed(3)} m³</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Forecast completion</span>
+                <span className="muted">Forecast completion</span>
                 <span className="font-semibold">{formatDate(latest.forecastCompletionISO)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Alignment confidence</span>
+                <span className="muted">Alignment confidence</span>
                 <ConfidenceBadge v={latest.alignmentConfidence} />
               </div>
               <div className="pt-2">

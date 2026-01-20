@@ -1,20 +1,27 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet } from "react-router-dom";
+import { useTheme } from "../app/useTheme";
 
 export function AuthLayout() {
+  const { mode, toggle } = useTheme();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-100 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold">ConsTrack</h1>
-          <p className="text-sm text-zinc-400">Sign in to continue</p>
+    <div className="min-h-screen flex items-center justify-center bg-app text-app px-4">
+      <div className="w-full max-w-md rounded-2xl border border-app card-surface p-6">
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold">ConsTrack</h1>
+            <p className="text-sm muted">Sign in to continue</p>
+          </div>
+          <button
+            onClick={toggle}
+            className="rounded-lg border border-app px-3 py-2 text-sm bg-app"
+            aria-label="Toggle theme"
+            title="Toggle light/dark"
+          >
+            {mode === "light" ? "🌞" : "🌙"}
+          </button>
         </div>
 
         <Outlet />
-
-        <div className="mt-6 text-xs text-zinc-400 flex justify-between">
-          <Link to="/login" className="hover:text-zinc-200">Login</Link>
-          <Link to="/register" className="hover:text-zinc-200">Register</Link>
-        </div>
       </div>
     </div>
   );

@@ -22,9 +22,7 @@ export function UploadComparePage() {
     <div className="space-y-6">
       <div>
         <div className="text-2xl font-semibold">Scans</div>
-        <div className="text-sm text-zinc-400">
-          Upload point clouds (t₁ and t₂) and select which scans to compare.
-        </div>
+        <div className="text-sm muted">Upload point clouds (t₁ and t₂) and select which scans to compare.</div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -44,9 +42,9 @@ export function UploadComparePage() {
             />
 
             <label className="block">
-              <div className="mb-1 text-sm text-zinc-300">Point cloud file</div>
+              <div className="mb-1 text-sm muted">Point cloud file</div>
               <input
-                className="block w-full text-sm text-zinc-300 file:mr-3 file:rounded-xl file:border file:border-zinc-800 file:bg-zinc-950 file:px-3 file:py-2 file:text-sm file:text-zinc-100 hover:file:bg-zinc-900"
+                className="block w-full text-sm text-app file:mr-3 file:rounded-xl file:border file:border-app file:bg-app file:px-3 file:py-2 file:text-sm file:text-app"
                 type="file"
                 accept=".las,.laz,.ply,.e57,.pcd,.xyz,.txt,.csv"
                 onChange={(e) => {
@@ -98,20 +96,18 @@ export function UploadComparePage() {
             </Select>
           </div>
 
-          <div className="mt-4 text-sm text-zinc-400">
-            Tip: t₁ should be the earlier scan and t₂ the later scan.
-          </div>
+          <div className="mt-4 text-sm muted">Tip: t₁ should be the earlier scan and t₂ the later scan.</div>
         </Card>
       </div>
 
       <Card title="Scan library" subtitle={`${data.scans.length} scans`}>
         {data.scans.length === 0 ? (
-          <div className="text-sm text-zinc-400">No scans yet. Upload your first scan above.</div>
+          <div className="text-sm muted">No scans yet. Upload your first scan above.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="text-zinc-400">
-                <tr className="border-b border-zinc-900">
+              <thead className="muted">
+                <tr className="border-b border-app">
                   <th className="text-left py-2 pr-3">Name</th>
                   <th className="text-left py-2 pr-3">Captured</th>
                   <th className="text-left py-2 pr-3">Size</th>
@@ -125,11 +121,11 @@ export function UploadComparePage() {
                   const isT1 = data.selectedT1 === s.id;
                   const isT2 = data.selectedT2 === s.id;
                   return (
-                    <tr key={s.id} className="border-b border-zinc-900/70">
-                      <td className="py-2 pr-3 font-medium">{s.name}</td>
-                      <td className="py-2 pr-3 text-zinc-300">{formatDate(s.capturedAtISO)}</td>
-                      <td className="py-2 pr-3 text-zinc-300">{formatBytes(s.sizeBytes)}</td>
-                      <td className="py-2 pr-3 text-zinc-300">{s.notes ?? "—"}</td>
+                    <tr key={s.id} className="border-b border-app/60">
+                      <td className="py-2 pr-3 font-medium text-app">{s.name}</td>
+                      <td className="py-2 pr-3 text-app">{formatDate(s.capturedAtISO)}</td>
+                      <td className="py-2 pr-3 text-app">{formatBytes(s.sizeBytes)}</td>
+                      <td className="py-2 pr-3 text-app">{s.notes ?? "—"}</td>
                       <td className="py-2 pr-3">
                         <div className="flex gap-2">
                           {isT1 && <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 text-zinc-900">t₁</span>}
